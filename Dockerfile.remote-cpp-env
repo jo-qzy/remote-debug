@@ -19,9 +19,9 @@ RUN apt-get update && apt-get -y install ca-certificates tzdata
 RUN apt-get update \
   && apt-get install -y ssh \
   build-essential \
-  clangd \
-  clang-format \
-  clang-tidy \
+  clangd-13 \
+  clang-format-13 \
+  clang-tidy-13 \
   gcc \
   g++ \
   gdb \

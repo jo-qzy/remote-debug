@@ -11,40 +11,47 @@
 # ssh credentials (test user):
 #   user@password 
 
-FROM ubuntu:20.04
+FROM debian:11
 
-RUN DEBIAN_FRONTEND="noninteractive" apt-get update && apt-get -y install tzdata
+RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
+RUN apt-get update && apt-get -y install ca-certificates tzdata
 
 RUN apt-get update \
   && apt-get install -y ssh \
-      build-essential \
-      gcc \
-      g++ \
-      gdb \
-      clang \
-      make \
-      ninja-build \
-      cmake \
-      autoconf \
-      automake \
-      locales-all \
-      dos2unix \
-      rsync \
-      tar \
-      python \
+  build-essential \
+  clangd \
+  clang-format \
+  clang-tidy \
+  gcc \
+  g++ \
+  gdb \
+  git \
+  make \
+  ninja-build \
+  autoconf \
+  automake \
+  locales-all \
+  dos2unix \
+  rsync \
+  tar \
+  wget \
+  python \
   && apt-get clean
 
+# Manully install cmake
+RUN CMAKE_VERSION=3.26.0-rc6; \
+  wget -O cmake-${CMAKE_VERSION}-Linux-x86_64.sh https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.sh \
+  && sh cmake-${CMAKE_VERSION}-Linux-x86_64.sh -- --skip-license --prefix=/usr \
+  && rm -f cmake-${CMAKE_VERSION}-Linux-x86_64.sh
+
 RUN ( \
-    echo 'LogLevel DEBUG2'; \
-    echo 'PermitRootLogin yes'; \
-    echo 'PasswordAuthentication yes'; \
-    echo 'Subsystem sftp /usr/lib/openssh/sftp-server'; \
-  ) > /etc/ssh/sshd_config_test_clion \
+  echo 'LogLevel INFO'; \
+  echo 'PermitRootLogin yes'; \
+  echo 'PasswordAuthentication yes'; \
+  echo 'Subsystem sftp /usr/lib/openssh/sftp-server'; \
+  ) > /etc/ssh/sshd_debug_config \
   && mkdir /run/sshd
 
-RUN useradd -m user \
-  && yes password | passwd user
+RUN echo "root:password" | chpasswd
 
-RUN usermod -s /bin/bash user
-
-CMD ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_config_test_clion"]
+CMD ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_debug_config"]

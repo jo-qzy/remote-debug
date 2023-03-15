@@ -1,57 +1,67 @@
-# CLion remote docker environment (How to build docker container, run and stop it)
+# Remote docker environment for CLion and VS Code.
 #
 # Build and run:
-#   docker build -t clion/remote-cpp-env:0.5 -f Dockerfile.remote-cpp-env .
-#   docker run -d --cap-add sys_ptrace -p 127.0.0.1:2222:22 --name clion_remote_env clion/remote-cpp-env:0.5
-#   ssh-keygen -f "$HOME/.ssh/known_hosts" -R "[localhost]:2222"
+#   docker build -t remote-cpp-env:1.0 -f Dockerfile.remote-cpp-env .
+#   docker run -d --cap-add sys_ptrace -p 127.0.0.1:2222:22 --name dev_container remote-cpp-env:0.5
 #
 # stop:
-#   docker stop clion_remote_env
+#   docker stop dev_container
 # 
-# ssh credentials (test user):
-#   user@password 
+# ssh credentials:
+#   root@password 
 
-FROM debian:11
+FROM debian:latest
 
+# install build tool, clangd is for vscode
 RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
-RUN apt-get update && apt-get -y install ca-certificates tzdata
+RUN DEBIAN_FRONTEND="noninteractive" apt update \
+    && apt-get install -y \
+    ssh \
+    build-essential \
+    clangd-13 \
+    clang-format-13 \
+    clang-tidy-13 \
+    gcc \
+    g++ \
+    gdb \
+    git \
+    make \
+    ninja-build \
+    autoconf \
+    automake \
+    locales-all \
+    dos2unix \
+    rsync \
+    tar \
+    wget \
+    python \
+    zsh \
+    && apt clean
 
-RUN apt-get update \
-  && apt-get install -y ssh \
-  build-essential \
-  clangd-13 \
-  clang-format-13 \
-  clang-tidy-13 \
-  gcc \
-  g++ \
-  gdb \
-  git \
-  make \
-  ninja-build \
-  autoconf \
-  automake \
-  locales-all \
-  dos2unix \
-  rsync \
-  tar \
-  wget \
-  python \
-  && apt-get clean
+# install cmake
+RUN CMAKE_VERSION=3.26.0; \
+    wget -O cmake-${CMAKE_VERSION}-Linux-x86_64.sh https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.sh \
+    && sh cmake-${CMAKE_VERSION}-Linux-x86_64.sh -- --skip-license --prefix=/usr \
+    && rm -f cmake-${CMAKE_VERSION}-Linux-x86_64.sh
 
-# Manully install cmake
-RUN CMAKE_VERSION=3.26.0-rc6; \
-  wget -O cmake-${CMAKE_VERSION}-Linux-x86_64.sh https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.sh \
-  && sh cmake-${CMAKE_VERSION}-Linux-x86_64.sh -- --skip-license --prefix=/usr \
-  && rm -f cmake-${CMAKE_VERSION}-Linux-x86_64.sh
+# install zsh
+RUN wget -O install.sh https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh \
+    && sh install.sh \
+    && rm -f install.sh \
+    && chsh -s /bin/zsh
+RUN git config --global --add oh-my-zsh.hide-dirty 1
 
+# config ssh
 RUN ( \
-  echo 'LogLevel INFO'; \
-  echo 'PermitRootLogin yes'; \
-  echo 'PasswordAuthentication yes'; \
-  echo 'Subsystem sftp /usr/lib/openssh/sftp-server'; \
-  ) > /etc/ssh/sshd_debug_config \
-  && mkdir /run/sshd
+    echo 'LogLevel INFO'; \
+    echo 'PermitRootLogin yes'; \
+    echo 'PasswordAuthentication yes'; \
+    echo 'Subsystem sftp /usr/lib/openssh/sftp-server'; \
+    ) > /etc/ssh/sshd_debug_config \
+    && mkdir /run/sshd
 
+# config root password
 RUN echo "root:password" | chpasswd
 
+# config damon command
 CMD ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_debug_config"]

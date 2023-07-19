@@ -1,27 +1,61 @@
 # Build and run:
 #   docker build -t clion/ubuntu/cpp-env:1.0 -f Dockerfile.cpp-env-ubuntu .
 
-FROM ubuntu:20.04
+FROM ubuntu:latest
 
+RUN sed -i 's/http:\/\/.*.ubuntu.com/http:\/\/mirrors.aliyun.com/g' /etc/apt/sources.list
 RUN DEBIAN_FRONTEND="noninteractive" apt-get update && apt-get -y install tzdata
 
-RUN apt-get update \
-  && apt-get install -y build-essential \
-      gcc \
-      g++ \
-      gdb \
-      clang \
-      make \
-      ninja-build \
-      cmake \
-      autoconf \
-      automake \
-      libtool \
-      valgrind \
-      locales-all \
-      dos2unix \
-      rsync \
-      tar \
-      python \
-      python-dev \
-  && apt-get clean
+RUN DEBIAN_FRONTEND="noninteractive" apt update \
+    && apt-get install -y \
+    ssh \
+    build-essential \
+    clangd-13 \
+    clang-format-13 \
+    clang-tidy-13 \
+    gcc \
+    g++ \
+    gdb \
+    git \
+    make \
+    ninja-build \
+    autoconf \
+    automake \
+    locales-all \
+    dos2unix \
+    rsync \
+    tar \
+    wget \
+    python3 \
+    zsh \
+    && apt clean
+
+# install cmake
+# RUN CMAKE_VERSION=3.26.4; \
+#    wget -O cmake-${CMAKE_VERSION}-Linux-x86_64.sh https://cmake.org/files/LatestRelease/cmake-${CMAKE_VERSION}-linux-x86_64.sh \
+#    && sh cmake-${CMAKE_VERSION}-Linux-x86_64.sh -- --skip-license --prefix=/usr \
+#    && rm -f cmake-${CMAKE_VERSION}-Linux-x86_64.sh
+
+# install zsh
+RUN wget -O install.sh https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh \
+    && sh install.sh \
+    && rm -f install.sh \
+    && chsh -s /bin/zsh
+RUN git config --global --add oh-my-zsh.hide-dirty 1
+
+# config ssh
+RUN ( \
+    echo 'LogLevel INFO'; \
+    echo 'PermitRootLogin yes'; \
+    echo 'PasswordAuthentication yes'; \
+    echo 'Subsystem sftp /usr/lib/openssh/sftp-server'; \
+    echo 'Port 2022'; \
+    ) > /etc/ssh/sshd_debug_config \
+    && mkdir /run/sshd
+
+# config root password
+RUN echo "root:password" | chpasswd
+
+# config damon command
+CMD ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_debug_config"]
+

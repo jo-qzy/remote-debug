@@ -1,0 +1,69 @@
+# Build and run:
+#   docker build -t clion/ubuntu/cpp-env:1.0 -f Dockerfile.cpp-env-ubuntu .
+
+FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
+
+ENV DEBIAN_FRONTEND noninteractive
+RUN sed -i 's/http:\/\/.*.ubuntu.com/https:\/\/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
+RUN apt-get update && apt-get -y --no-install-recommends install tzdata
+RUN apt update \
+    && apt-get install -y \
+    ssh \
+    build-essential \
+    clangd-13 \
+    clang-format-13 \
+    clang-tidy-13 \
+    cmake \
+    gcc \
+    g++ \
+    gdb \
+    git \
+    make \
+    ninja-build \
+    autoconf \
+    automake \
+    locales-all \
+    dos2unix \
+    rsync \
+    tar \
+    wget \
+    python3 \
+    pip \
+    zsh \
+    && apt clean
+
+# install conda
+#RUN wget https://repo.anaconda.com/archive/Anaconda3-2023.07-1-Linux-x86_64.sh \
+#    && bash Anaconda3-2023.07-1-Linux-x86_64.sh \
+#    && source /root/.bashrc
+
+# build torch
+#RUN cd /root \
+#    && git clone --recursive https://github.com/pytorch/pytorch \
+#    && cd pytorch && git submodule sync \
+#    && git submodule update --init --recursive \
+#    && conda install mkl mkl-include \
+#    && conda install -c pytorch magma-cuda110 \
+#    && pip install -r requirements.txt \
+#    && export _GLIBCXX_USE_CXX11_ABI=1 \
+#    && export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"} \
+#    && python setup.py develop
+
+# RUN pip config set global.index-url https://mirrors.bfsu.edu.cn/pypi/web/simple/
+
+# config ssh
+RUN ( \
+    echo 'LogLevel INFO'; \
+    echo 'PermitRootLogin yes'; \
+    echo 'PasswordAuthentication yes'; \
+    echo 'Subsystem sftp /usr/lib/openssh/sftp-server'; \
+    echo 'Port 22'; \
+    ) > /etc/ssh/sshd_debug_config \
+    && mkdir /run/sshd
+
+# config root password
+RUN echo "root:password" | chpasswd
+
+# config damon command
+# config damon command
+CMD ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_debug_config"]

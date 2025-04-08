@@ -10,9 +10,9 @@ RUN DEBIAN_FRONTEND="noninteractive" apt update \
     && apt-get install -y \
     ssh \
     build-essential \
-    clangd-13 \
-    clang-format-13 \
-    clang-tidy-13 \
+    clangd \
+    clang-format \
+    clang-tidy \
     gcc \
     g++ \
     gdb \
